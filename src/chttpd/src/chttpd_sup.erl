@@ -29,7 +29,15 @@ start_link(Args) ->
     supervisor:start_link({local,?MODULE}, ?MODULE, Args).
 
 init([]) ->
-    Children = [
+    Children = case fabric2_node_types:is_type("api_frontend") of
+        true -> get_children();
+        false -> []
+    end,
+    {ok, {{one_for_one, 3, 10},
+        couch_epi:register_service(chttpd_epi, Children)}}.
+
+get_children() ->
+    [
         {
             config_listener_mon,
             {config_listener_mon, start_link, [?MODULE, settings()]},
@@ -41,12 +49,9 @@ init([]) ->
         ?CHILD(chttpd, worker),
         ?CHILD(chttpd_auth_cache, worker),
         {chttpd_auth_cache_lru,
-	 {ets_lru, start_link, [chttpd_auth_cache_lru, lru_opts()]},
-	 permanent, 5000, worker, [ets_lru]}
-    ],
-
-    {ok, {{one_for_one, 3, 10},
-        couch_epi:register_service(chttpd_epi, Children)}}.
+            {ets_lru, start_link, [chttpd_auth_cache_lru, lru_opts()]},
+            permanent, 5000, worker, [ets_lru]}
+    ].
 
 handle_config_change("chttpd", "bind_address", Value, _, Settings) ->
     maybe_replace(bind_address, Value, Settings);

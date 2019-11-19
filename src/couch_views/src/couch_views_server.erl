@@ -39,13 +39,18 @@ start_link() ->
 
 
 init(_) ->
-    process_flag(trap_exit, true),
     couch_views_jobs:set_timeout(),
-    St = #{
-        workers => #{},
-        max_workers => max_workers()
-    },
-    {ok, spawn_workers(St)}.
+    case fabric2_node_types:is_type("view_indexing") of
+        true ->
+            process_flag(trap_exit, true),
+            St = #{
+                workers => #{},
+                max_workers => max_workers()
+            },
+            {ok, spawn_workers(St)};
+        false ->
+            ignore
+    end.
 
 
 terminate(_, _St) ->
