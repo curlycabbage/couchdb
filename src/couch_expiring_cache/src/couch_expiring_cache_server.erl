@@ -27,10 +27,17 @@
     code_change/3
 ]).
 
+-export([
+    layer_prefix/0
+]).
 
--define(DEFAULT_BATCH, 1000).
+
+-define(DEFAULT_BATCH_SIZE, 1000).
 -define(DEFAULT_PERIOD_MS, 5000).
 -define(DEFAULT_MAX_JITTER_MS, 1000).
+
+
+-include_lib("couch_expiring_cache/include/couch_expiring_cache.hrl").
 
 
 start_link() ->
@@ -38,12 +45,13 @@ start_link() ->
 
 
 init(_) ->
-    Ref = schedule_remove_expired(),
+    ?MODULE = ets:new(?MODULE, [named_table, public, {read_concurrency, true}]),
+    true = set_layer_prefix(),
     {ok, #{
-        timer_ref => Ref,
-        lag => 0,
+        timer_ref => schedule_remove_expired(),
         last_removal => 0,
-        min_ts => 0}}.
+        oldest_ts => 0,
+        lag => 0}}.
 
 
 terminate(_, _) ->
@@ -58,15 +66,15 @@ handle_cast(Msg, St) ->
     {stop, {bad_cast, Msg}, St}.
 
 
-handle_info(remove_expired, St = #{min_ts := MinTS0}) ->
-    Now = erlang:system_time(second),
-    MinTS = max(MinTS0, remove_expired(Now)),
+handle_info(remove_expired, St = #{oldest_ts := OldestTS0}) ->
+    Now = erlang:system_time(?TIME_UNIT),
+    OldestTS = max(OldestTS0, remove_expired(Now)),
     Ref = schedule_remove_expired(),
     {noreply, St#{
         timer_ref := Ref,
-        lag := Now - MinTS,
         last_removal := Now,
-        min_ts := MinTS}};
+        oldest_ts := OldestTS,
+        lag := Now - OldestTS}};
 
 handle_info(Msg, St) ->
     {stop, {bad_info, Msg}, St}.
@@ -74,6 +82,21 @@ handle_info(Msg, St) ->
 
 code_change(_OldVsn, St, _Extra) ->
     {ok, St}.
+
+
+layer_prefix() ->
+    [{layer_prefix, Prefix}] = ets:lookup(?MODULE, layer_prefix),
+    Prefix.
+
+
+%% Private
+
+
+set_layer_prefix() ->
+    fabric2_fdb:transactional(fun(Tx) ->
+        LayerPrefix = fabric2_fdb:get_dir(Tx),
+        true = ets:insert(?MODULE, {layer_prefix, LayerPrefix})
+    end).
 
 
 remove_expired(EndTS) ->
@@ -99,4 +122,4 @@ max_jitter_ms() ->
 
 batch_size() ->
     config:get_integer("couch_expiring_cache", "batch_size",
-        ?DEFAULT_BATCH).
+        ?DEFAULT_BATCH_SIZE).

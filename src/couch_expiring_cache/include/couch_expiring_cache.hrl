@@ -1,0 +1,1 @@
+-define(TIME_UNIT, millisecond).
