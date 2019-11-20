@@ -58,6 +58,7 @@ src/rebar/
 src/snappy/
 src/triq/
 src/hyper/
+src/dreyfus/
 tmp/
 
 src/couch/*.o

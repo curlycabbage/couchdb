@@ -98,6 +98,7 @@ DepDescs = [
 {fauxton,          {url, "https://github.com/apache/couchdb-fauxton"},
                    {tag, "v1.1.20"}, [raw]},
 %% Third party deps
+{dreyfus,          "dreyfus",          "master"},
 {folsom,           "folsom",           {tag, "CouchDB-0.8.2"}},
 {hyper,            "hyper",            {tag, "CouchDB-2.2.0-4"}},
 {ibrowse,          "ibrowse",          {tag, "CouchDB-4.0.1"}},
@@ -110,6 +111,9 @@ DepDescs = [
 BaseUrl = "https://github.com/apache/",
 
 MakeDep = fun
+    ({AppName, RepoName, Version}) when AppName == dreyfus ->
+        Url = "https://github.com/cloudant-labs/" ++ RepoName ++ ".git",
+        {AppName, ".*", {git, Url, Version}};        
     ({AppName, {url, Url}, Version}) ->
         {AppName, ".*", {git, Url, Version}};
     ({AppName, {url, Url}, Version, Options}) ->
