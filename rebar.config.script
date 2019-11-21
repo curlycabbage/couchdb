@@ -98,7 +98,7 @@ DepDescs = [
 {fauxton,          {url, "https://github.com/apache/couchdb-fauxton"},
                    {tag, "v1.1.20"}, [raw]},
 %% Third party deps
-{dreyfus,          "dreyfus",          "master"},
+{dreyfus,          "dreyfus",          "f8f118d9572b625a86405106df8c2bbcdb9bfde8"},
 {folsom,           "folsom",           {tag, "CouchDB-0.8.2"}},
 {hyper,            "hyper",            {tag, "CouchDB-2.2.0-4"}},
 {ibrowse,          "ibrowse",          {tag, "CouchDB-4.0.1"}},
